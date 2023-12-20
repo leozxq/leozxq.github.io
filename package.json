@@ -14,7 +14,9 @@
     "lil-gui": "^0.19.1",
     "three": "^0.159.0",
     "vercel": "^33.0.0",
-    "vue": "^3.3.11"
+    "vite-plugin-pages": "^0.32.0",
+    "vue": "^3.3.11",
+    "vue-router": "^4.2.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.2",
