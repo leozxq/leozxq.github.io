@@ -19,6 +19,10 @@ const router = createRouter({
       path: "/tank",
       component: () => import("../pages/Tank.vue"),
     },
+    {
+      path: "/galaxy",
+      component: () => import("../pages/Galaxy.vue"),
+    },
   ],
 });
 

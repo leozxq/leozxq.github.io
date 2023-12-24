@@ -15,8 +15,15 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
+renderer.setClearColor("#1b1132");
 const scene = new THREE.Scene();
+// fog build
+// const fog = new THREE.Fog(0x1b1132, 0, 20);
+// scene.fog = fog;
+
+const textureLoader = new THREE.TextureLoader();
+const glassFrontBackColorTexture = textureLoader.load("/img/glass.JPG");
+
 // glass geometry build
 const tankGroup = new THREE.Group();
 const frontBack = new THREE.BoxGeometry(6, 4, 0.06);
@@ -25,7 +32,8 @@ const end = new THREE.BoxGeometry(6, 0.06, 4);
 const glassMaterial = new THREE.MeshStandardMaterial({
   color: 0xadd8e6, // 浅蓝色，像玻璃的颜色
   transparent: true,
-  opacity: 0.2, // 半透明
+  opacity: 0.9, // 半透明
+  map: glassFrontBackColorTexture,
 });
 const mesh1 = new THREE.Mesh(frontBack, glassMaterial);
 mesh1.position.z = 2;
@@ -74,12 +82,17 @@ spotLight.shadow.camera.near = 0.5; // default
 spotLight.shadow.camera.far = 20; // default
 spotLight.shadow.camera.fov = 50;
 spotLight.shadow.focus = 1;
-scene.add(spotLight);
+// scene.add(spotLight);
 // ambient light
 const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-scene.add(ambient);
+// scene.add(ambient);
+const directionLight = new THREE.DirectionalLight(0xffffff, 5);
+directionLight.position.set(0, 1, 5);
+directionLight.target = tankGroup;
+directionLight.castShadow = true;
+scene.add(directionLight);
 // all helper
-const cameraHelper = new THREE.CameraHelper(spotLight.shadow.camera);
+const cameraHelper = new THREE.CameraHelper(directionLight.shadow.camera);
 const axesHelper = new THREE.AxesHelper(2);
 scene.add(cameraHelper, axesHelper);
 // camera build
@@ -97,6 +110,7 @@ const gui = new GUI();
 const glassFolder = gui.addFolder("glass");
 const spotLightFolder = gui.addFolder("spotLight");
 const planeFolder = gui.addFolder("plane");
+// const rendererFolder = gui.addFolder("renderer");
 // glassFolder.close();
 glassFolder.add(tankGroup.position, "x", -3, 3, 0.01);
 glassFolder.add(glassMaterial, "wireframe");
