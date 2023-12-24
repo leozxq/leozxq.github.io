@@ -23,6 +23,10 @@ const router = createRouter({
       path: "/galaxy",
       component: () => import("../pages/Galaxy.vue"),
     },
+    {
+      path: "/scroll",
+      component: () => import("../pages/Scroll.vue"),
+    },
   ],
 });
 
