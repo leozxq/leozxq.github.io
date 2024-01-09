@@ -27,6 +27,10 @@ const router = createRouter({
       path: "/scroll",
       component: () => import("../pages/Scroll.vue"),
     },
+    {
+      path: "/Physics_world",
+      component: () => import("../pages/Physics_world.vue"),
+    },
   ],
 });
 
