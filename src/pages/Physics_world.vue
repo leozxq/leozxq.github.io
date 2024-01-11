@@ -1,5 +1,6 @@
 <template>
   <div ref="physics"></div>
+  <div @click="reset">restart</div>
 </template>
 <script setup>
 import * as THREE from "three";
@@ -17,14 +18,19 @@ parameters.color = "#3cfb3c";
 //physics
 const world = new CANNON.World();
 world.gravity.set(0, -9.82, 0);
-// create sphere
-const sphereShape = new CANNON.Sphere(0.5);
-const sphereBody = new CANNON.Body({
-  mass: 1,
-  position: new CANNON.Vec3(0, 3, 0),
-  shape: sphereShape,
-});
-world.addBody(sphereBody);
+// Materials
+const defaultMaterial = new CANNON.Material("default");
+
+const defaultContactMaterial = new CANNON.ContactMaterial(
+  defaultMaterial,
+  defaultMaterial,
+  {
+    friction: 0.1,
+    restitution: 0.7,
+  }
+);
+world.addContactMaterial(defaultContactMaterial);
+world.defaultContactMaterial = defaultContactMaterial;
 
 // Floor
 const floorShape = new CANNON.Plane();
@@ -34,16 +40,13 @@ floorBody.position.y = -2;
 floorBody.addShape(floorShape);
 floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(-1, 0, 0), Math.PI * 0.5);
 world.addBody(floorBody);
-// Materials
-const concreteMaterial = new CANNON.Material("concrete");
-const plasticMaterial = new CANNON.Material("plastic");
 
 // floor geometry build
 const floor = new THREE.Mesh(
   new THREE.PlaneGeometry(10, 10),
   new THREE.MeshStandardMaterial({
     color: "#777777",
-    metalness: 0.3,
+    metalness: 0.4,
     roughness: 0.4,
   })
 );
@@ -52,18 +55,6 @@ floor.rotation.x = -Math.PI * 0.5;
 floor.receiveShadow = true;
 scene.add(floor);
 
-// test sphere
-const sphere = new THREE.Mesh(
-  new THREE.SphereGeometry(0.5, 32, 32),
-  new THREE.MeshStandardMaterial({
-    color: "#bbbbbb",
-    metalness: 0.3,
-    roughness: 0.4,
-  })
-);
-sphere.castShadow = true;
-sphere.position.y = -1;
-scene.add(sphere);
 // Light
 const spotLight = new THREE.SpotLight(0xffffff, 10);
 spotLight.distance = 30;
@@ -81,10 +72,22 @@ directionLight.position.set(0, -3, 5);
 directionLight.target = floor;
 directionLight.castShadow = true;
 scene.add(directionLight, spotLight);
+
 // GUI
 const gui = new GUI({ width: 200 });
+
+const debugObject = {};
+debugObject.createSphere = () => {
+  createSphere(Math.random() * 0.5, {
+    x: (Math.random() - 0.5) * 3,
+    y: 2,
+    z: (Math.random() - 0.5) * 3,
+  });
+};
 const planeFolder = gui.addFolder("plane");
 planeFolder.addColor(parameters, "color").onChange();
+const sphereFolder = gui.addFolder("sphere");
+sphereFolder.add(debugObject, "createSphere");
 //renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -107,6 +110,39 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// Utils
+const objectsUpdate = [];
+const sphereGeometry = new THREE.SphereGeometry(1, 20, 20);
+const sphereMaterial = new THREE.MeshStandardMaterial({
+  metalness: 0.7,
+  roughness: 0.3,
+  // envMap: environmentMapTexture,
+});
+const createSphere = (radius, position) => {
+  const mesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+  mesh.scale.set(radius, radius, radius);
+  mesh.castShadow = true;
+  mesh.position.copy(position);
+  scene.add(mesh);
+
+  // CANNON Body
+  const shape = new CANNON.Sphere(radius);
+  const body = new CANNON.Body({
+    mass: 1,
+    position: new CANNON.Vec3(0, 3, 0),
+    shape,
+    material: defaultMaterial,
+  });
+  body.position.copy(position);
+  world.addBody(body);
+  // Save in objects to update
+  objectsUpdate.push({
+    mesh: mesh,
+    body: body,
+  });
+};
+
 const clock = new THREE.Clock();
 let oldElapsedTime = 0;
 // appendChild for DOM
@@ -120,9 +156,13 @@ onMounted(() => {
     oldElapsedTime = elapsedTime;
 
     //update physics world
+    // sphereBody.applyForce(new CANNON.Vec3(1, 0, 0), sphereBody.position);
     world.step(1 / 60, deltaTime, 3);
+    for (const object of objectsUpdate) {
+      object.mesh.position.copy(object.body.position);
+    }
 
-    sphere.position.copy(sphereBody.position);
+    // sphere.position.copy(sphereBody.position);
 
     controls.update();
 
@@ -132,4 +172,5 @@ onMounted(() => {
   ticks();
   physics.value.appendChild(renderer.domElement);
 });
+const reset = () => {};
 </script>
