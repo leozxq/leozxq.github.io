@@ -84,14 +84,24 @@ debugObject.createSphere = () => {
     z: (Math.random() - 0.5) * 3,
   });
 };
+debugObject.createBox = () => {
+  createBox(Math.random() * 0.5, Math.random() * 0.5, Math.random() * 0.5, {
+    x: (Math.random() - 0.5) * 3,
+    y: 3,
+    z: (Math.random() - 0.5) * 3,
+  });
+};
 const planeFolder = gui.addFolder("plane");
 planeFolder.addColor(parameters, "color").onChange();
 const sphereFolder = gui.addFolder("sphere");
 sphereFolder.add(debugObject, "createSphere");
+sphereFolder.add(debugObject, "createBox");
 //renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 // camera build
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -117,6 +127,7 @@ const sphereGeometry = new THREE.SphereGeometry(1, 20, 20);
 const sphereMaterial = new THREE.MeshStandardMaterial({
   metalness: 0.7,
   roughness: 0.3,
+  color: "#003300",
   // envMap: environmentMapTexture,
 });
 const createSphere = (radius, position) => {
@@ -130,13 +141,46 @@ const createSphere = (radius, position) => {
   const shape = new CANNON.Sphere(radius);
   const body = new CANNON.Body({
     mass: 1,
-    position: new CANNON.Vec3(0, 3, 0),
+    // position: new CANNON.Vec3(0, 3, 0),
     shape,
     material: defaultMaterial,
   });
   body.position.copy(position);
   world.addBody(body);
   // Save in objects to update
+  objectsUpdate.push({
+    mesh: mesh,
+    body: body,
+  });
+};
+
+// Create box
+const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+const boxMaterial = new THREE.MeshStandardMaterial({
+  metalness: 0.9,
+  roughness: 0.1,
+  color: "#0033ff",
+});
+// const boxShap = new CANNON.Box(1);
+const createBox = (width, height, depht, position) => {
+  const mesh = new THREE.Mesh(boxGeometry, boxMaterial);
+  mesh.scale.set(width, height, depht);
+  mesh.castShadow = true;
+  mesh.position.copy(position);
+  scene.add(mesh);
+
+  // CANNON body
+  const shape = new CANNON.Box(
+    new CANNON.Vec3(width / 2, height / 2, depht / 2)
+  );
+
+  const body = new CANNON.Body({
+    mass: 1,
+    shape,
+    material: defaultMaterial,
+  });
+  body.position.copy(position);
+  world.addBody(body);
   objectsUpdate.push({
     mesh: mesh,
     body: body,
