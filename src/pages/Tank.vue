@@ -155,7 +155,7 @@ directionLight.position.set(0, 1, 5);
 directionLight.target = tankGroup;
 directionLight.castShadow = true;
 scene.add(directionLight);
-// scene.add(ambient);
+scene.add(ambient);
 // all helper
 const cameraHelper = new THREE.CameraHelper(directionLight.shadow.camera);
 const axesHelper = new THREE.AxesHelper(2);
