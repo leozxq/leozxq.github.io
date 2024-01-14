@@ -146,18 +146,20 @@ spotLight.shadow.camera.near = 0.5; // default
 spotLight.shadow.camera.far = 20; // default
 spotLight.shadow.camera.fov = 50;
 spotLight.shadow.focus = 1;
-// scene.add(spotLight);
+scene.add(spotLight);
 // ambient light
-const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+const ambient = new THREE.AmbientLight(0xffffff, 1);
 // scene.add(ambient);
 const directionLight = new THREE.DirectionalLight(0xffffff, 5);
 directionLight.position.set(0, 1, 5);
 directionLight.target = tankGroup;
 directionLight.castShadow = true;
 scene.add(directionLight);
+// scene.add(ambient);
 // all helper
 const cameraHelper = new THREE.CameraHelper(directionLight.shadow.camera);
 const axesHelper = new THREE.AxesHelper(2);
+cameraHelper.visible = false;
 scene.add(cameraHelper, axesHelper);
 // camera build
 const camera = new THREE.PerspectiveCamera(
@@ -242,7 +244,7 @@ const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 const boxMaterial = new THREE.MeshStandardMaterial({
   metalness: 0.9,
   roughness: 0.1,
-  color: "#0033ff",
+  color: "#ff0000",
 });
 // const boxShap = new CANNON.Box(1);
 const createBox = (width, height, depht, position) => {
@@ -292,6 +294,7 @@ onMounted(() => {
     world.step(1 / 60, deltaTime, 3);
     for (const object of objectsUpdate) {
       object.mesh.position.copy(object.body.position);
+      object.mesh.quaternion.copy(object.body.quaternion);
     }
     controls.update();
     renderer.render(scene, camera);
