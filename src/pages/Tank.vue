@@ -8,10 +8,12 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 // import gsap from "gsap";
 import GUI from "lil-gui";
-import CANNON from "cannon";
+import * as CANNON from "cannon-es";
 
 //physics
 const world = new CANNON.World();
+// world.broadphase = new CANNON.SAPBroadphase(world);
+// world.allowSleep = true;
 world.gravity.set(0, -9.82, 0);
 // Materials
 const defaultMaterial = new CANNON.Material("default");
@@ -38,6 +40,16 @@ const scene = new THREE.Scene();
 // const fog = new THREE.Fog(0x1b1132, 0, 20);
 // scene.fog = fog;
 
+const hitSoundBox = new Audio("/sound/hit2.mp3");
+const hitSoundSphere = new Audio("/sound/hit3.mp3");
+const playHitSound = (audioObj, collision) => {
+  const impactStrength = collision.contact.getImpactVelocityAlongNormal();
+  if (impactStrength > 1.5) {
+    audioObj.volume = Math.random();
+    audioObj.currentTime = 0;
+    audioObj.play();
+  }
+};
 const textureLoader = new THREE.TextureLoader();
 const glassFrontBackColorTexture = textureLoader.load("/img/glass.JPG");
 
@@ -116,11 +128,13 @@ world.addBody(rightBody);
 
 // Floor
 const floorShape = new CANNON.Plane(8, 8);
-const floorBody = new CANNON.Body();
-floorBody.mass = 0;
+const floorBody = new CANNON.Body({
+  mass: 0,
+  shape: floorShape,
+  material: defaultMaterial,
+});
 floorBody.position.y = -2;
-floorBody.addShape(floorShape);
-floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(-1, 0, 0), Math.PI * 0.5);
+floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI * 0.5);
 world.addBody(floorBody);
 
 // small ball build
@@ -186,11 +200,21 @@ debugObject.createSphere = () => {
   });
 };
 debugObject.createBox = () => {
-  createBox(Math.random() * 0.5, Math.random() * 0.5, Math.random() * 0.5, {
-    x: (Math.random() - 0.5) * 3,
+  createBox(Math.random(), Math.random(), Math.random(), {
+    x: (Math.random() - 0.5) * 6,
     y: 4,
-    z: (Math.random() - 0.5) * 3,
+    z: (Math.random() - 0.5) * 4,
   });
+};
+debugObject.reset = () => {
+  for (const object of objectsUpdate) {
+    object.body.removeEventListener("collide", function (collision) {
+      playHitSound(hitSoundSphere, collision);
+    });
+    world.removeBody(object.body);
+    scene.remove(object.mesh);
+  }
+  objectsUpdate.splice(0, objectsUpdate.length);
 };
 // const rendererFolder = gui.addFolder("renderer");
 // glassFolder.close();
@@ -206,6 +230,7 @@ spotLightFolder.addColor(spotLight, "color").name("spotLightColor");
 
 physicsFolder.add(debugObject, "createSphere");
 physicsFolder.add(debugObject, "createBox");
+physicsFolder.add(debugObject, "reset");
 // Utils
 const objectsUpdate = [];
 const sphereGeometry = new THREE.SphereGeometry(1, 20, 20);
@@ -231,6 +256,9 @@ const createSphere = (radius, position) => {
     material: defaultMaterial,
   });
   body.position.copy(position);
+  body.addEventListener("collide", function (collision) {
+    playHitSound(hitSoundSphere, collision);
+  });
   world.addBody(body);
   // Save in objects to update
   objectsUpdate.push({
@@ -265,6 +293,10 @@ const createBox = (width, height, depht, position) => {
     material: defaultMaterial,
   });
   body.position.copy(position);
+  // body.addEventListener("collide", playHitSound);
+  body.addEventListener("collide", function (collision) {
+    playHitSound(hitSoundBox, collision);
+  });
   world.addBody(body);
   objectsUpdate.push({
     mesh: mesh,
@@ -296,6 +328,8 @@ onMounted(() => {
       object.mesh.position.copy(object.body.position);
       object.mesh.quaternion.copy(object.body.quaternion);
     }
+    // mesh3.position.copy(leftBody.position);
+    // planeMesh.position.copy(floorBody.position);
     controls.update();
     renderer.render(scene, camera);
     window.requestAnimationFrame(ticks);

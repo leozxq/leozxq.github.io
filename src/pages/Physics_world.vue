@@ -4,102 +4,84 @@
 </template>
 <script setup>
 import * as THREE from "three";
-
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import GUI from "lil-gui";
-import { ref, onMounted } from "vue";
-import CANNON from "cannon";
+import { ref, onMounted, render } from "vue";
+import * as CANNON from "cannon-es";
+
+// Loaders
+const gltfLoader = new GLTFLoader();
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+
 //scene
 const scene = new THREE.Scene();
-//parameters
-const parameters = {};
-parameters.color = "#3cfb3c";
 
-//physics
-const world = new CANNON.World();
-world.gravity.set(0, -9.82, 0);
-// Materials
-const defaultMaterial = new CANNON.Material("default");
+// Environment Map
+const environmentMap = cubeTextureLoader.load([
+  "/img/map1/px.png",
+  "/img/map1/nx.png",
+  "/img/map1/py.png",
+  "/img/map1/ny.png",
+  "/img/map1/pz.png",
+  "/img/map1/nz.png",
+]);
+console.log(environmentMap);
+scene.background = environmentMap;
 
-const defaultContactMaterial = new CANNON.ContactMaterial(
-  defaultMaterial,
-  defaultMaterial,
-  {
-    friction: 0.1,
-    restitution: 0.7,
-  }
-);
-world.addContactMaterial(defaultContactMaterial);
-world.defaultContactMaterial = defaultContactMaterial;
+//GUI
+const gui = new GUI();
+// Models
+gltfLoader.load("/models/FlightHelmet/glTF/FlightHelmet.gltf", (gltf) => {
+  console.log(gltf);
+  gltf.scene.scale.set(10, 10, 10);
+  gltf.scene.position.set(0, -4, 0);
+  scene.add(gltf.scene);
+  gui
+    .add(gltf.scene.rotation, "y")
+    .min(-Math.PI)
+    .max(Math.PI)
+    .step(0.001)
+    .name("ratation");
+});
 
-// Floor
-const floorShape = new CANNON.Plane();
-const floorBody = new CANNON.Body();
-floorBody.mass = 0;
-floorBody.position.y = -2;
-floorBody.addShape(floorShape);
-floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(-1, 0, 0), Math.PI * 0.5);
-world.addBody(floorBody);
-
-// floor geometry build
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(10, 10),
-  new THREE.MeshStandardMaterial({
-    color: "#777777",
-    metalness: 0.4,
-    roughness: 0.4,
-  })
-);
-floor.position.y = -2;
-floor.rotation.x = -Math.PI * 0.5;
-floor.receiveShadow = true;
-scene.add(floor);
-
-// Light
-const spotLight = new THREE.SpotLight(0xffffff, 10);
-spotLight.distance = 30;
-spotLight.angle = Math.PI / 4;
-spotLight.decay = 0;
-spotLight.position.set(0, 10, 0);
-spotLight.castShadow = true;
-spotLight.shadow.mapSize.set(1024, 1024);
-spotLight.shadow.camera.near = 0.5; // default
-spotLight.shadow.camera.far = 20; // default
-spotLight.shadow.camera.fov = 50;
-spotLight.shadow.focus = 1;
-const directionLight = new THREE.DirectionalLight(0xffffff, 5);
-directionLight.position.set(0, -3, 5);
-directionLight.target = floor;
-directionLight.castShadow = true;
-scene.add(directionLight, spotLight);
+// Lights
+const directionalLight = new THREE.DirectionalLight("#ffffff", 1);
+directionalLight.position.set(0.25, 3, -2.25);
+scene.add(directionalLight);
 
 // GUI
-const gui = new GUI({ width: 200 });
-
-const debugObject = {};
-debugObject.createSphere = () => {
-  createSphere(Math.random() * 0.5, {
-    x: (Math.random() - 0.5) * 3,
-    y: 2,
-    z: (Math.random() - 0.5) * 3,
-  });
-};
-debugObject.createBox = () => {
-  createBox(Math.random() * 0.5, Math.random() * 0.5, Math.random() * 0.5, {
-    x: (Math.random() - 0.5) * 3,
-    y: 3,
-    z: (Math.random() - 0.5) * 3,
-  });
-};
-const planeFolder = gui.addFolder("plane");
-planeFolder.addColor(parameters, "color").onChange();
-const sphereFolder = gui.addFolder("sphere");
-sphereFolder.add(debugObject, "createSphere");
-sphereFolder.add(debugObject, "createBox");
+const lightFolder = gui.addFolder("light");
+lightFolder
+  .add(directionalLight, "intensity")
+  .min(0)
+  .max(10)
+  .step(0.001)
+  .name("lightIntensity");
+lightFolder
+  .add(directionalLight.position, "x")
+  .min(-5)
+  .max(5)
+  .step(0.001)
+  .name("lightX");
+lightFolder
+  .add(directionalLight.position, "y")
+  .min(-5)
+  .max(5)
+  .step(0.001)
+  .name("lightY");
+lightFolder
+  .add(directionalLight.position, "z")
+  .min(-5)
+  .max(5)
+  .step(0.001)
+  .name("lightZ");
 //renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
+// renderer.physicallyCorrectLights = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 // camera build
@@ -121,72 +103,6 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Utils
-const objectsUpdate = [];
-const sphereGeometry = new THREE.SphereGeometry(1, 20, 20);
-const sphereMaterial = new THREE.MeshStandardMaterial({
-  metalness: 0.7,
-  roughness: 0.3,
-  color: "#003300",
-  // envMap: environmentMapTexture,
-});
-const createSphere = (radius, position) => {
-  const mesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
-  mesh.scale.set(radius, radius, radius);
-  mesh.castShadow = true;
-  mesh.position.copy(position);
-  scene.add(mesh);
-
-  // CANNON Body
-  const shape = new CANNON.Sphere(radius);
-  const body = new CANNON.Body({
-    mass: 1,
-    // position: new CANNON.Vec3(0, 3, 0),
-    shape,
-    material: defaultMaterial,
-  });
-  body.position.copy(position);
-  world.addBody(body);
-  // Save in objects to update
-  objectsUpdate.push({
-    mesh: mesh,
-    body: body,
-  });
-};
-
-// Create box
-const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-const boxMaterial = new THREE.MeshStandardMaterial({
-  metalness: 0.9,
-  roughness: 0.1,
-  color: "#0033ff",
-});
-// const boxShap = new CANNON.Box(1);
-const createBox = (width, height, depht, position) => {
-  const mesh = new THREE.Mesh(boxGeometry, boxMaterial);
-  mesh.scale.set(width, height, depht);
-  mesh.castShadow = true;
-  mesh.position.copy(position);
-  scene.add(mesh);
-
-  // CANNON body
-  const shape = new CANNON.Box(
-    new CANNON.Vec3(width / 2, height / 2, depht / 2)
-  );
-
-  const body = new CANNON.Body({
-    mass: 1,
-    shape,
-    material: defaultMaterial,
-  });
-  body.position.copy(position);
-  world.addBody(body);
-  objectsUpdate.push({
-    mesh: mesh,
-    body: body,
-  });
-};
-
 const clock = new THREE.Clock();
 let oldElapsedTime = 0;
 // appendChild for DOM
@@ -198,15 +114,6 @@ onMounted(() => {
     const elapsedTime = clock.getElapsedTime();
     const deltaTime = elapsedTime - oldElapsedTime;
     oldElapsedTime = elapsedTime;
-
-    //update physics world
-    // sphereBody.applyForce(new CANNON.Vec3(1, 0, 0), sphereBody.position);
-    world.step(1 / 60, deltaTime, 3);
-    for (const object of objectsUpdate) {
-      object.mesh.position.copy(object.body.position);
-    }
-
-    // sphere.position.copy(sphereBody.position);
 
     controls.update();
 
