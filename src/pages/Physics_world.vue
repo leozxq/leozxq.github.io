@@ -18,6 +18,17 @@ const cubeTextureLoader = new THREE.CubeTextureLoader();
 //scene
 const scene = new THREE.Scene();
 
+const updateAllMaterials = () => {
+  scene.traverse((child) => {
+    if (
+      child instanceof THREE.Mesh &&
+      child.material instanceof THREE.MeshStandardMaterial
+    ) {
+      // child.material.envMap = environmentMap;
+      child.material.envMapIntensity = debugObject.envMapIntensity;
+    }
+  });
+};
 // Environment Map
 const environmentMap = cubeTextureLoader.load([
   "/img/map1/px.png",
@@ -27,11 +38,21 @@ const environmentMap = cubeTextureLoader.load([
   "/img/map1/pz.png",
   "/img/map1/nz.png",
 ]);
+environmentMap.outputColorSpace = THREE.SRGBColorSpace;
 console.log(environmentMap);
 scene.background = environmentMap;
-
+scene.environment = environmentMap;
 //GUI
 const gui = new GUI();
+const debugObject = {};
+debugObject.envMapIntensity = 2;
+gui
+  .add(debugObject, "envMapIntensity")
+  .min(0)
+  .max(10)
+  .step(0.01)
+  .name("envMapIntensity")
+  .onChange(updateAllMaterials);
 // Models
 gltfLoader.load("/models/FlightHelmet/glTF/FlightHelmet.gltf", (gltf) => {
   console.log(gltf);
@@ -81,9 +102,24 @@ lightFolder
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-// renderer.physicallyCorrectLights = true;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 3;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+gui
+  .add(renderer, "toneMapping", {
+    No: THREE.NoToneMapping,
+    Linear: THREE.LinearToneMapping,
+    Reinhard: THREE.ReinhardToneMapping,
+    Cineon: THREE.CineonToneMapping,
+    ACESFilmic: THREE.ACESFilmicToneMapping,
+  })
+  .onFinishChange(() => {
+    renderer.toneMapping = Number(renderer.toneMapping);
+    updateAllMaterials();
+  });
 // camera build
 const camera = new THREE.PerspectiveCamera(
   75,
