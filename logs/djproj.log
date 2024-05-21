@@ -1,0 +1,4 @@
+INFO 2024-05-21 15:36:29,669 autoreload 14264 6248 Watching for file changes with StatReloader
+INFO 2024-05-21 15:37:30,175 autoreload 14264 6248 D:\project\dream_one\goodone\djproj\djproj\settings.py changed, reloading.
+INFO 2024-05-21 15:37:30,780 autoreload 11548 6424 Watching for file changes with StatReloader
+INFO 2024-05-21 15:37:40,108 basehttp 11548 14820 "GET /tankSimulation/aquatic_plants/ HTTP/1.1" 200 6951
